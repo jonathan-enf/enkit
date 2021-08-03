@@ -1644,7 +1644,7 @@ function _write_parents_file() {
   done > "${PATH}"
 }
 
-ABNORMAL=1
+# Ensure we always save the PARENTS file, even if we die:
 function _cleanup() {
   local lineno="$1"
   # Ensure we always save the PARENTS file, even if we die:
@@ -4712,7 +4712,6 @@ function main() {
   cmdname="$(tr '-' '_' <<< "${cmdname}")"
   if type "gee__${cmdname}" >/dev/null 2>&1; then
     "gee__${cmdname}" "$@"
-    ABNORMAL=0
   else
     echo "Unknown command ${cmdname}"
     echo ""
