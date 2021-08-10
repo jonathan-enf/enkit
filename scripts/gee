@@ -1630,7 +1630,7 @@ function _write_parents_file() {
   fi
   if [[ "${#PARENTS[@]}" -eq 0 ]]; then
     _warn "Almost wrote empty parents file!"
-    return
+    return 0
   fi
   local PATH="${REPO_DIR}/.gee/parents"
   if [[ ! -d "${REPO_DIR}/.gee" ]]; then
@@ -1644,7 +1644,7 @@ function _write_parents_file() {
   done > "${PATH}"
 }
 
-# Ensure we always save the PARENTS file, even if we die:
+ABNORMAL=1
 function _cleanup() {
   local lineno="$1"
   # Ensure we always save the PARENTS file, even if we die:
@@ -3307,7 +3307,6 @@ function gee__pr_make() {
     _fatal "No changes in this branch."
   fi
 
-  local FROM_BRANCH="${GHUSER}:${CURRENT_BRANCH}"
   if [[ "${UPSTREAM}" == "${GHUSER}" ]]; then
     # gh-cli treats this as a special case for some reason.
     FROM_BRANCH="${CURRENT_BRANCH}"
@@ -4712,6 +4711,7 @@ function main() {
   cmdname="$(tr '-' '_' <<< "${cmdname}")"
   if type "gee__${cmdname}" >/dev/null 2>&1; then
     "gee__${cmdname}" "$@"
+    ABNORMAL=0
   else
     echo "Unknown command ${cmdname}"
     echo ""
