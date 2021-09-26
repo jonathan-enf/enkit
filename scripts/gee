@@ -1110,6 +1110,19 @@ function _remote_branch_exists() {
   fi
 }
 
+function _repair_worktree() {
+  local BRANCH="$1"; shift
+  local BRDIR="${REPO_DIR}/${BRANCH}"
+
+  if ! [[ -d "${BRDIR}" ]]; then
+    # try to fix worktree.
+    _git worktree add "${REPO_DIR}/${BRANCH}"
+    _info "Created ${BRDIR}"
+  fi
+
+  ( cd "${BRDIR}"; git checkout -q "${BRANCH}" );
+}
+
 function _local_branch_exists() {
   # Returns true if a local branch exists (even if it's worktree was deleted).
   # Fixes up the worktree if the branch is missing from the worktree.
@@ -1120,19 +1133,13 @@ function _local_branch_exists() {
   fi
 
   # branch exists, but let's double check that worktree is set up correctly:
-  local BRDIR
-  BRDIR="${REPO_DIR}/${BRANCH}"
-  if ! [[ -d "${BRDIR}" ]]; then
-    # try to fix worktree.
-    _git worktree add "${REPO_DIR}/${BRANCH}"
-    _info "Created ${BRDIR}"
-  fi
+  _repair_worktree "${BRANCH}"
   _update_branch_to_worktree
   BRDIR="${BRANCH_TO_WORKTREE["${BRANCH}"]}"
   if [[ -n "${BRDIR}" ]]; then
     return 0
   else
-    _fatal "Branch ${BRANCH} exists but could not create worktree."
+    _fatal "Branch ${BRANCH} exists but something is wrong with the worktree."
     return 1
   fi
 }
