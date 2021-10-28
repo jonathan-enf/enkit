@@ -1968,6 +1968,44 @@ function _check_gee_version_is_current() {
   fi
 }
 
+function _add_osc8_hyperlinks() {
+  # OSC8 adds the ability to annotate text in the terminal as a clickable hyperlink:
+  #  https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda
+  # This function filters stdin and adds OSC8 markup to each line, if it
+  # detects something that looks like a link.
+  local line
+  local url_regex='^(.*)(https?://[-A-Za-z0-9\+&@#/%?=~_|!:,.;]*[-A-Za-z0-9\+&@#/%=~_|])(.*)$'
+
+  while read -r line; do
+    # hyperlink anything that looks like a regex:
+    if [[ "${line}" =~ $url_regex ]]; then
+      printf "%s" \
+        "${BASH_REMATCH[1]}" \
+        $'\033]8;;' \
+        "https://github.com/${UPSTREAM}/${REPO}/pull/${BASH_REMATCH[2]}" \
+        $'\033\\' \
+        "#${BASH_REMATCH[2]}" \
+        $'\033]8;;\033\\' \
+        "${BASH_REMATCH[3]}" \
+        $'\n'
+      continue
+    fi
+    # If the line begins with a PR number, hyperlink it:
+    # if [[ "${line}" =~ ^#\([0-9][0-9]*\)\>(.*)$ ]]; then
+    if [[ "${line}" =~ ^#([0-9][0-9]*)(.*)$ ]]; then
+      printf "%s" \
+        $'\033]8;;' \
+        "https://github.com/${UPSTREAM}/${REPO}/pull/${BASH_REMATCH[1]}" \
+        $'\033\\' \
+        "#${BASH_REMATCH[1]}" \
+        $'\033]8;;\033\\' \
+        "${BASH_REMATCH[2]}" \
+        $'\n'
+      continue
+    fi
+    printf "%s\n" "${line}"
+  done
+}
 
 ##########################################################################
 # init command
@@ -3281,7 +3319,7 @@ function gee__pr_list() {
     --state open \
     --json number,reviewDecision,headRefName,title \
     --jq '.[] | "#\(.number)\t\(.headRefName)\t\(.reviewDecision)\t\(.title)"' \
-    ) | column -t -s $'\t'
+    ) | column -t -s $'\t' | _add_osc8_hyperlinks
   echo ""
 
   _info "PRs assigned to ${WHO_3RD_PERSON}:"
@@ -3312,7 +3350,7 @@ function gee__pr_list() {
     -L "${PR_LIST_MAX_FETCH}" \
     --json number,author,headRefName,createdAt,state,title,reviewDecision,reviewRequests \
     --jq "${JQSCRIPT[*]}" \
-    ) | column -t -s $'\t'
+    ) | column -t -s $'\t' | _add_osc8_hyperlinks
 }
 
 ##########################################################################
