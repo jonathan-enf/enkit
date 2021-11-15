@@ -4579,6 +4579,8 @@ The "usage" option produces gee's manual.
 The "commands" option shows a summary of all available commands.
 
 The "markdown" option produce's gee's manual, in markdown format.
+
+The "html" option produce's gee's manual, in html format.
 EOT
 
 function _render_markdown_manual() {
