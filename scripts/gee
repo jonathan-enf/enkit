@@ -126,6 +126,64 @@ if [[ -n "${DEBUG}" ]]; then
   set -x
 fi
 
+function _markdown_to_html() {
+  # Implements a very limited subset of markdown, implemented as a sed
+  # script.  This is the bare minimum set of functionality needed to
+  # render gee's manual page as HTML.
+  #
+  # Currently supported:
+  #
+  #   * Headers ("# foo").
+  #   * Code style (backticks).
+  #   * Lists ("* foo").
+  #   * Code-formatted blocks.
+  local SCRIPT
+  read -r -d '' SCRIPT <<'ENDOFSCRIPT' || /bin/true
+/^$/b blankline
+/^#/b header
+/^[[:blank:]]*\*/b list
+
+# plain text
+H
+b next
+
+# headers:
+: header
+/^# /s/^#[[:blank:]]+([[:alnum:]]+)(.*)/<h1 id="\1">\1\2<\/h1>/g
+/^## /s/^##[[:blank:]]+([[:alnum:]]+)(.*)/<h2 id="\1">\1\2<\/h2>/g
+/^### /s/^###[[:blank:]]+([[:alnum:]]+)(.*)/<h3 id="\1">\1\2<\/h3>/g
+H
+b next
+
+# lists:
+: list
+s/^[[:blank:]]*\*[[:blank:]]+(.*)/<li>\1<\/li>/g
+H
+b next
+
+: next
+$b blankline # implicit final blank line
+d
+
+# blank line
+: blankline
+z  # zap the pattern space.
+x  # swap the pattern and hold spaces.
+s/^(.*___.*)/<pre>\1\n<\/pre>/  # use <pre> for ascii art.
+s/^(\n    .*)/<pre>\1\n<\/pre>/  # use <pre> for indented blocks.
+s/^(\n<li>.*)/<ol>\1\n<\/ol>/  # use <ol> for list items.
+s/^(\n[^<].*)/<p>\1\n<\/p>/  # everything else is a paragraph.
+ENDOFSCRIPT
+  sed -E "${SCRIPT}"
+}
+
+# for testing gee's markdown implementation:
+function gee__markdown() {
+  _markdown_to_html
+}
+
+
+
 function _fix_pwd() {
   # Make sure we're in a real directory.
   #
@@ -4626,6 +4684,31 @@ function _render_markdown_manual() {
     echo ""
     echo "${LONGHELP["${h_cmd}"]}" \
       | perl -p -e 's/^Usage: (.*?)$/Usage: `$1`/gmso'
+    echo ""
+  done
+}
+
+
+function _render_html_manual() {
+  echo "${USAGE//\{\{VERSION\}\}/"${VERSION}"}" | _markdown_to_html
+  echo ""
+  echo "<h2>Command Summary</h2>"
+  echo ""
+  echo "<table>"
+  echo "  <th><td>Command</td><td>Summary</td></th>"
+  local h h_cmd h_desc
+  for h in "${HELP[@]}"; do
+    read -r -d ":" h_cmd h_desc <<< "${h}"
+    echo "  <tr><td>${h_cmd}</td><td>${h_desc}</td></tr>"
+  done
+  echo "</table>"
+  echo ""
+  echo "<h2>Commands</h2>"
+  echo ""
+  for h in "${HELP[@]}"; do
+    read -r -d ":" h_cmd h_desc <<< "${h}"
+    echo "<h3>${h_cmd}</h3>"
+    echo "${LONGHELP["${h_cmd}"]}" | _markdown_to_html
     echo ""
   done
 }
