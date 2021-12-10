@@ -2559,11 +2559,7 @@ function gee__rupdate() {
   _add_parent_branches_to_chain "${CURRENT_BRANCH}"  # puts branches into CHAIN array
 
   _set_main
-  _banner "Updating branch \"${MAIN}\""
-  _update_main
 
-  local PREVIOUS_B
-  PREVIOUS_B="${MAIN}"
   for B in "${CHAIN[@]}"; do
     local PARENT_BRANCH
     PARENT_BRANCH="$(_get_parent_branch "${B}")"
@@ -2581,7 +2577,7 @@ function gee__rupdate() {
       fi
     fi
 
-    # Rebase from PREVIOUS_B onto B
+    # Rebase from PARENT_BRANCH onto B
     _safer_rebase "${B}" "${PARENT_BRANCH}"
   done
   _info Done.
