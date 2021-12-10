@@ -22,9 +22,8 @@ setup() {
   declare -A FLAGS=()
   declare -a ARGS_POSITIONAL=()
 
-  _parse_options "abcdef:g" -b -c -f foo bar -g -a bum
+  _parse_options "abcdef:g" -- -b -c -f foo bar -g -a bum
 
-  # typeset -p FLAGS >&3
   assert_equal 1    "${FLAGS[b]}"
   assert_equal 1    "${FLAGS[c]}"
   assert_equal foo  "${FLAGS[f]}"
@@ -38,14 +37,14 @@ setup() {
 @test "_parse_options success" {
   declare -A FLAGS=()
   declare -a ARGS_POSITIONAL=()
-  run _parse_options "abcdef:g" -b -c -f foo bar -g -a bum
+  run _parse_options "abcdef:g" -- -b -c -f foo bar -g -a bum
   assert_success
 }
 
 @test "_parse_options failure" {
   declare -A FLAGS=()
   declare -a ARGS_POSITIONAL=()
-  run _parse_options "abcdef:g" -b -c -f foo bar -g -a -z bum
+  run _parse_options "abcdef:g" -- -b -c -f foo bar -g -a -z bum
   assert_failure
 }
 
@@ -81,3 +80,20 @@ setup() {
   assert_failure
 }
 
+@test "_parse_options long" {
+  declare -A FLAGS=()
+  declare -a ARGS_POSITIONAL=()
+  _parse_options "abcdef:g" hotel india juliett: kilo -- \
+    -b -f foo bar --india --juliett=fie --hotel bum
+
+  typeset -p FLAGS >&3
+  typeset -p ARGS_POSITIONAL >&3
+
+  assert_equal 1    "${FLAGS[b]}"
+  assert_equal foo  "${FLAGS[f]}"
+  assert_equal 1    "${FLAGS[india]}"
+  assert_equal fie  "${FLAGS[juliett]}"
+  assert_equal 2    "${#ARGS_POSITIONAL[@]}"
+  assert_equal bar  "${ARGS_POSITIONAL[0]}"
+  assert_equal bum  "${ARGS_POSITIONAL[1]}"
+}

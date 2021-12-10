@@ -275,34 +275,80 @@ function _rotate_gee_log() {
 }
 
 function _parse_options() {
-  # _parse_options <optstring> <args...>
+  # _parse_options <optstring> <longoptions...> -- <args...>
   #
   # This function populates the global FLAGS associative array with all
   # of the set flags.  Any remaining positional arguments are left behind
   # in the ARGS_POSITIONAL array
   export FLAGS=()
   export ARGS_POSITIONAL=()
+
+  # Parse optstring:
   local optstring="$1"; shift
-  local arg
-  OPTERR=0  # enable silent error reporting
-  while [[ $# -gt 0 ]]; do
-    unset OPTARG
-    unset OPTIND
-    while getopts "${optstring}" arg; do
-      if [[ "${arg}" == "?" ]]; then
-        local x
-        x=$((OPTIND-1))
-        _fatal "Bad command flag: ${!x}"
-      fi
-      FLAGS["${arg}"]="${OPTARG:-1}"
-    done
-    shift $((OPTIND-1))
-    if [[ $# -gt 0 ]]; then
-      ARGS_POSITIONAL+=( "$1" )
-      shift
+  local opts=()
+  local O
+  while read -r O; do
+    if [[ "${O}" == ":" ]]; then
+      opts[-1]+=":"
+    else
+      opts+=( "${O}" )
     fi
+  done < <(grep -o . <<< "${optstring}")
+
+  # Parse long options, if present:
+  local longopts=()
+  while [[ "$1" != "--" ]]; do
+    opts+=( "$1" )
+    longopts+=( "$1" )
+    shift
   done
-  return 0
+  shift  # discard the --
+
+  # normalize arguments
+  local -a GETOPT_CMD=( getopt -o "${optstring}" )
+  if [[ -n "${longopts[*]}" ]]; then
+    GETOPT_CMD+=(
+      --long
+      "$(printf "%s\n" "${longopts[@]}" | paste -sd "," -)" )
+  fi
+  GETOPT_CMD+=( "--" "$@" )
+  local NORMARGS=""
+  if ! NORMARGS="$( "${GETOPT_CMD[@]}" )"; then
+    _error "Bad argument in $*"
+    return 1
+  fi
+  eval set -- "${NORMARGS}"
+
+  local OPTERR=0
+  while [[ $# -gt 0 ]]; do
+    if [[ "$1" == "--" ]]; then
+      shift;
+      ARGS_POSITIONAL+=( "$@" )
+      break;
+    fi
+    if [[ "$1" =~ ^- ]]; then
+      local arg
+      arg="${1#-}"
+      arg="${arg#-}"
+      shift
+      if [[ " ${opts[*]} " =~ \ ${arg}\  ]]; then
+        FLAGS["${arg}"]=1
+        continue
+      elif [[ " ${opts[*]} " =~ \ ${arg}:\  ]]; then
+        FLAGS["${arg}"]="$1"
+        shift
+        continue
+      else
+        _error "Bad command flag: ${arg}"
+        OPTERR=$(( OPTERR + 1 ))
+        shift
+        continue
+      fi
+    fi
+    ARGS_POSITIONAL+=( "$1" )
+    shift
+  done
+  return "${OPTERR}"
 }
 
 function _contains_element() {
@@ -2264,7 +2310,7 @@ function gee__pack() {
   _check_cwd
   _set_main
   declare -A FLAGS=()
-  _parse_options "o:" "$@"
+  _parse_options "o:" -- "$@"
   local CURRENT_BRANCH
   CURRENT_BRANCH="$(_get_current_branch)"
   if _branch_has_unstaged_changes; then
@@ -2995,6 +3041,11 @@ function gee__commit() {
   _startup_checks
 
   _check_cwd
+
+  declare -A FLAGS=()
+  declare -a ARGS_POSITIONAL=()
+  _parse_options "n" "nopush" -- "$@"
+
   local CURRENT_BRANCH
   CURRENT_BRANCH="$(_get_current_branch)"
   _set_main
@@ -3012,6 +3063,10 @@ function gee__commit() {
     echo "Skipped \"git add --all\" because branch is home dir."
   fi
   if _git_can_fail commit "$@"; then
+    if (( "${FLAGS[n]}" )) || (( "${FLAGS[nopush]}" )); then
+      _info "Skipped push to origin."
+      return 0
+    fi
     if _remote_branch_exists origin "${CURRENT_BRANCH}"; then
       _git fetch
       local -a COUNTS
