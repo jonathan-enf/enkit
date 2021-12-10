@@ -3785,6 +3785,10 @@ function gee__pr_submit() {
   #     "  ${DIFFS[*]}"
   # fi
 
+  # Update parent:
+  _read_parents_file
+  PARENTS["${CURRENT_BRANCH}"]="${MAIN}"
+  _write_parents_file
   # Reset this branch to now contain the squash-merged commit:
   _checkout_or_die "${CURRENT_BRANCH}"  # make sure we're in the right branch.
   _git checkout -B "${CURRENT_BRANCH}" "upstream/${MAIN}"
@@ -3830,6 +3834,7 @@ function gee__pr_submit() {
 
   # 1d. Bail early if there are no kids.
   if [[ "${#KIDS[@]}" -eq 0 ]]; then
+    _info "No children of this branch to update."
     # Our job is done here.
     return 0
   fi
@@ -3846,9 +3851,16 @@ function gee__pr_submit() {
       _safer_rebase "${CHILD}" "${CURRENT_BRANCH}-unsquashed" "${CURRENT_BRANCH}"
     done
   fi
-  # Because ${CURRENT_BRANCH} still exists and contains the squash-merged
-  # tree, there is no need to change the parentage of the branch tree
-  # (unlike gee__remove_branch, below).
+
+  # The main branch adopts this branch's child branches.
+  _read_parents_file
+  local K
+  for K in "${!PARENTS[@]}"; do
+    if [[ "${PARENTS["$K"]}" == "${CURRENT_BRANCH}" ]]; then
+      PARENTS["$K"]="${MAIN}"
+    fi
+  done
+  _write_parents_file
 }
 
 ##########################################################################
