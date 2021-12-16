@@ -24,7 +24,7 @@ filegroup(
 )
 
 astore_upload(
-    name = "test_deploy",
+    name = "deploy",
     dir = "test",
     targets = [
         ":gee-script",
