@@ -4444,6 +4444,13 @@ function gee__repair() {
       _warn "Skipping non-git directory ${DIR}"
       continue
     fi
+
+    # attempt to abort a rebase if a rebase is in progress.
+    if _is_rebase_in_progress; then
+      _info "${DIR}: Aborting a rebase-in-progress..."
+      _git rebase --abort || /bin/true
+    fi
+
     OBRANCH="$(_get_current_branch)"
 
     # Give user opportunity to abort in-progress rebase operations:
