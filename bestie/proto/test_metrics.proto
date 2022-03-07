@@ -51,6 +51,20 @@ message TestMetric {
     int64 timestamp = 4;  // nanoseconds since epoch (e.g. Python: time.time_ns())
 }
 
+message TestIntegerMetric {
+    string metricname = 1;
+    repeated Tag tags = 2;
+    int64 value = 3;
+    int64 timestamp = 4;  // nanoseconds since epoch (e.g. Python: time.time_ns())
+}
+
+message TestStringMetric {
+    string metricname = 1;
+    repeated Tag tags = 2;
+    string value = 3;
+    int64 timestamp = 4;  // nanoseconds since epoch (e.g. Python: time.time_ns())
+}
+
 // Each metric tag must be supplied in the form of a key/value string pair.
 message Tag {
     string key = 1;
@@ -81,6 +95,8 @@ message BigQueryTable {
 // an optional table identifier may be specified for development testing, etc.
 message TestMetrics {
     repeated TestMetric metrics = 1;
+    repeated TestStringMetric string_metrics = 2;
+    repeated TestIntegerMetric integer_metrics = 3;
     oneof optional_table {
         BigQueryTable table = 20;
     };
