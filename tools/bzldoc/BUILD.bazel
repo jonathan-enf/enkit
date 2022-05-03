@@ -18,6 +18,17 @@ bzl_library(
     ],
 )
 
+py_library(
+    name = "bzl2yaml_lib",
+    srcs = ["bzl2yaml_lib.py"],
+    srcs_version = "PY3",
+    visibility = ["//visibility:public"],
+    deps = [
+        requirement("absl-py"),
+        requirement("pyyaml"),
+    ],
+)
+
 py_binary(
     name = "bzl2yaml",
     srcs = ["bzl2yaml.py"],
@@ -25,8 +36,22 @@ py_binary(
     srcs_version = "PY3",
     visibility = ["//visibility:public"],
     deps = [
+        ":bzl2yaml_lib",
         requirement("absl-py"),
-        requirement("pyyaml"),
+    ],
+)
+
+py_binary(
+    name = "bzldoc",
+    srcs = ["bzldoc.py"],
+    python_version = "PY3",
+    srcs_version = "PY3",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":bzl2yaml_lib",
+        "//tools/codegen:codegen_lib",
+        "//tools/mdfmt:mdfmt_lib",
+        requirement("absl-py"),
     ],
 )
 

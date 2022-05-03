@@ -8,23 +8,11 @@ A simple wrapper for the mdformat library.
 import mdformat
 from absl import app, flags, logging
 
+from tools.mdfmt.mdfmt_lib import format_file
+
 FLAGS = flags.FLAGS
 flags.DEFINE_bool("check", False, "Enable check mode.")
 flags.DEFINE_string("output", None, "Write reformatted text here (instead of operating in place).")
-
-
-def format_file(in_fname, out_fname, check=False):
-    with open(in_fname, "r", encoding="utf-8") as fd:
-        unformatted = fd.read()
-    extensions = {"gfm", "tables"}
-    options = {"wrap": 78}
-    formatted = mdformat.text(unformatted, options=options, extensions=extensions)
-    if check:
-        return formatted == unformatted
-    else:
-        with open(out_fname, "w", encoding="utf-8") as fd:
-            fd.write(formatted)
-        return True
 
 
 def main(argv):

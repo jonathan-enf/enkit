@@ -7,14 +7,12 @@ bzl_library(
     name = "mdfmt_bzl",
 )
 
-py_binary(
-    name = "mdfmt",
-    srcs = ["mdfmt.py"],
-    python_version = "PY3",
+py_library(
+    name = "mdfmt_lib",
+    srcs = ["mdfmt_lib.py"],
     srcs_version = "PY3",
     visibility = ["//visibility:public"],
     deps = [
-        requirement("absl-py"),
         requirement("attrs"),
         requirement("importlib-metadata"),
         requirement("linkify-it-py"),
@@ -27,6 +25,18 @@ py_binary(
         requirement("tomli"),
         requirement("uc-micro-py"),
         requirement("zipp"),
+    ],
+)
+
+py_binary(
+    name = "mdfmt",
+    srcs = ["mdfmt.py"],
+    python_version = "PY3",
+    srcs_version = "PY3",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":mdfmt_lib",
+        requirement("absl-py"),
     ],
 )
 

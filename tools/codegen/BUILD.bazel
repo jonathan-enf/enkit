@@ -39,10 +39,9 @@ py_test(
     tags = ["no-presubmit"],
 )
 
-py_binary(
-    name = "codegen",
-    srcs = ["codegen.py"],
-    python_version = "PY3",
+py_library(
+    name = "codegen_lib",
+    srcs = ["codegen_lib.py"],
     srcs_version = "PY3",
     visibility = ["//visibility:public"],
     deps = [
@@ -52,6 +51,17 @@ py_binary(
         requirement("jsonschema"),
         requirement("markupsafe"),
         requirement("pyyaml"),
+    ],
+)
+py_binary(
+    name = "codegen",
+    srcs = ["codegen.py"],
+    python_version = "PY3",
+    srcs_version = "PY3",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":codegen_lib",
+        requirement("absl-py"),
     ],
 )
 
