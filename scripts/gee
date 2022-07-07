@@ -4840,6 +4840,65 @@ function gee__upgrade() {
 }
 
 ##########################################################################
+# grep_history command
+##########################################################################
+
+_register_help "grep_history" "Grep all versions of a file." <<'EOT'
+Usage: gee grep_history <file> <grep arguments...>
+Aliases: hgrep
+
+This command iterates sequentially over each version of a file in the git
+history, and greps that file using the provided grep options.  This could be
+used, for example, to find the commit associated with a specific change a
+change to a specific line of a file (like "git blame", but looking deeper into
+the history than the last change to each line).
+
+For example:
+
+    $ gee hgrep ./scripts/gee -A 3 "function gee__make_branch"
+    2fe53f0 gee prompt: fix labeling of non-printing characters (#696) (20 hours ago) <Jonathan Mayer>:
+    function gee__make_branch() {
+      _startup_checks
+
+    a334846 prune (#678) (8 days ago) <Jonathan Mayer>:
+    function gee__make_branch() {
+      _startup_checks
+    ...
+
+If no grep options are provided, grep_history will print the entire
+file for each version.
+
+EOT
+
+function gee__hgrep() { gee__grep_history "$@"; }
+function gee__grep_history() {
+  local FILE="$1"; shift
+  if [[ -z "${FILE}" ]]; then
+    _fatal "grep_history command requires a file argument."
+  fi
+  if [[ ! -f "${FILE}" ]]; then
+    _warn "${FILE} does not exist."
+  fi
+  local -a GREP_OPTS=( "$@" )
+  if (( "${#GREP_OPTS[@]}" == 0 )); then
+    GREP_OPTS+=(".")  # match everything
+  fi
+  local -a COMMITS=()
+  readarray -t COMMITS < <(git log --pretty=format:'%h' --abbrev-commit "${FILE}")
+  if (( "${#COMMITS[@]}" == 0 )); then
+    _warn "No commits associated with this file."
+  fi
+  local COMMIT
+  for COMMIT in "${COMMITS[@]}"; do
+    git show -s --color \
+      --pretty=format:'%Cred%h%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset:' \
+      --abbrev-commit \
+      "${COMMIT}"
+    git show "${COMMIT}:${FILE}" | grep "${GREP_OPTS[@]}" || /bin/true
+  done
+}
+
+##########################################################################
 # version command
 ##########################################################################
 
