@@ -1,0 +1,17 @@
+This template should fail to render using data.yaml, as it
+references a variable that isn't present in the yaml file.
+This template exists to validate codegen's error reporting
+from within a bazel build flow.
+
+{%- for x in bop.attrs.items() %}
+{%-   set parts = x.split(".") %}
+  this_will_fail={{ parts[0] }}
+{%- endfor %}{# x #}
+
+over={{over}}
+zoo={{zoo}}
+foo={{foo}}
+{%- for t in bum %}
+  bum: {{ t }}
+{%- endfor %}
+

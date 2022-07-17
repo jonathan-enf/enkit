@@ -26,3 +26,10 @@ codegen_test(
         "zoo=zebra",
     ],
 )
+
+codegen_test(
+    name = "missing_data-test",
+    srcs = ["missing_data.template"],
+    data = ["data.yaml"],
+    expected = "missing_data-test.expected",
+)
