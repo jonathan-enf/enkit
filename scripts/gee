@@ -4576,7 +4576,7 @@ function gee__scrub_github() {
   _install_tools
 
   # update our view of origin
-  _git fetch origin -v --depth=1 --prune
+  _git fetch origin -v --prune
 
   local -a BRANCHES=()
   mapfile -t BRANCHES < <( \
