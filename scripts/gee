@@ -141,7 +141,7 @@ function _fix_pwd() {
   # Let's make sure we're in a directory that exists:
   local PIFS="${IFS}"
   local D="${PWD}"
-  cd /
+  cd / 2>/dev/null
   local p
   IFS="/"; for p in ${D}; do
     if [[ -n "$p" && -d "$p" ]]; then
@@ -195,11 +195,6 @@ PARENTS_FILE_IS_LOADED=0
 PWD_CMD="$(command -v pwd)"  # dev: /usr/bin/pwd, fpga-dev: /bin/pwd  :-(
 declare -A FLAGS=()  # for _parse_options(), below
 declare -a ARGS_POSITIONAL=()  # for _parse_options(), below
-
-# Make sure we're in a directory that exists:
-while ! "${PWD_CMD}" >/dev/null; do
-  cd ..
-done
 
 if [[ -z "${REPO}" ]]; then
   # Examine the directory to see if we're in a repo already.
