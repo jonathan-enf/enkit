@@ -577,6 +577,9 @@ function bkup__lsvolumes() {
   _cmd "${RCLONE}" lsf \
     "remote:${BUCKET}/${P}" \
     "${OPTS[@]}" | /usr/bin/column -t -s $'\t'
+  echo "Current volume: ${VOLUME_ID}"
+  echo "RPATH=${RPATH}"
+  echo "BACKUPPATH=${BACKUPPATH}"
 }
 
 ##########################################################################
