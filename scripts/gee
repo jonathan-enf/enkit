@@ -3697,6 +3697,7 @@ function gee__pr_checks() { gee__pr_check "$@"; }
 function gee__pr_check() {
   _startup_checks "pr_check"
 
+  local PREV_CHECKS=""
   local -a CHECKS=()
   local -A CHECK_COUNTS=()
   local PENDING=1
@@ -3710,7 +3711,10 @@ function gee__pr_check() {
       CHECKS_FAILED=0
       PENDING=0
     else
-      _info "${CHECKS[@]}"
+      if [[ "${PREV_CHECKS}" != "${CHECKS[*]}" ]]; then
+          _info "${CHECKS[@]}"
+          PREV_CHECKS="${CHECKS[*]}"
+      fi
       # something went wrong.  Is a test pending, or did we get a failure?
       CHECK_COUNTS=( [fail]=0 )
       local LINE
