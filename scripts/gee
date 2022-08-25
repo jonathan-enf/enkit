@@ -1248,6 +1248,11 @@ function _install_tools() {
       _fatal "Could not install jq."
     fi
   fi
+
+  if ! command -v dialog >/dev/null; then
+    _warn "The optional but useful \"dialog\" utility is missing from your system."
+    _info "Consider running: sudo apt install dialog"
+  fi
 }
 
 function _count_diffs() {
