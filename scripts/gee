@@ -162,7 +162,9 @@ declare -A BRANCH_TO_WORKTREE=()
 readonly GEE_LOG_FILE="${HOME}/gee.log"
 readonly TRUE=0
 readonly FALSE=1
+readonly GEE_BETA_CHANNEL_MARKER_FILE="${HOME}/.gee.channel.is.beta"
 readonly GEE_ON_ASTORE="test/gee"
+readonly GEE_BETA_ON_ASTORE="test/gee.beta"
 readonly GIT=/usr/bin/git
 readonly GH=/usr/bin/gh
 readonly JQ=/usr/bin/jq
@@ -2074,6 +2076,14 @@ function _print_codeowners() {
   done | sort -u
 }
 
+function _gee_astore_path() {
+  if [[ -f "${GEE_BETA_CHANNEL_MARKER_FILE}" ]]; then
+    echo "${GEE_BETA_ON_ASTORE}"
+  else
+    echo "${GEE_ON_ASTORE}"
+  fi
+}
+
 # Returns true iff this is the latest available version of gee.
 function _check_gee_version_is_current() {
   local GEE_PATH CUR_MD5 NEW_MD5
@@ -2081,7 +2091,8 @@ function _check_gee_version_is_current() {
   CUR_MD5="$(md5sum "${GEE_PATH}" | awk '{print $1}')"
   NEW_MD5=""
   local -a ASTORE_OUTPUT=()
-  if _read_cmd ASTORE_OUTPUT "${ENKIT}" astore list "${GEE_ON_ASTORE}"; then
+  local ASTORE_PATH="$(_gee_astore_path)"
+  if _read_cmd ASTORE_OUTPUT "${ENKIT}" astore list "${ASTORE_PATH}"; then
     local -a FIELDS
     read -r -a FIELDS <<< "${ASTORE_OUTPUT[2]}"
     if [[ "${#FIELDS[@]}" -eq 10 ]]; then
@@ -5220,12 +5231,43 @@ END_OF_GEE_PROMPT
 ##########################################################################
 
 _register_help "upgrade" "Upgrade the gee tool." <<'EOT'
-Usage: gee upgrade [--check]
+Usage: gee upgrade [--switch_to_beta] [--switch_to_stable]
+
+`gee upgrade` checks for a newer version of gee, and if one is available,
+will offer to install it for you.
+
+There are two release channels for gee: stable, and beta.  To switch
+to the beta channel, run:
+
+    gee upgrade --switch_to_beta
+
+Subsequent calls to `gee upgrade` will look for updates in the beta
+channel only.
+
+To switch back to the stable channel:
+
+    gee upgrade --switch_to_stable
+
 EOT
 
 function gee__upgrade() {
   local GEE_PATH
   GEE_PATH="$(readlink -f "$0")"
+  if [[ "$1" == "--switch_to_beta" ]]; then
+    if [[ -f "${GEE_BETA_CHANNEL_MARKER_FILE}" ]]; then
+      _info "BETA channel is already selected."
+    else
+      touch "${GEE_BETA_CHANNEL_MARKER_FILE}"
+    fi
+  elif [[ "$1" == "--switch_to_stable" ]]; then
+    if [[ -f "${GEE_BETA_CHANNEL_MARKER_FILE}" ]]; then
+      rm -f "${GEE_BETA_CHANNEL_MARKER_FILE}"
+    else
+      _info "STABLE channel is already selected."
+    fi
+  else
+    _warn "Ignoring unsupported arguments to gee upgrade: $*"
+  fi
   if _check_gee_version_is_current; then
     _info "${GEE_PATH} is already up-to-date."
   else
@@ -5233,7 +5275,7 @@ function gee__upgrade() {
       # make a backup
       mv -f "${GEE_PATH}"{,.backup}
       cd "$(dirname "${GEE_PATH}")"
-      _cmd enkit astore download "${GEE_ON_ASTORE}"
+      _cmd enkit astore download "$(_gee_astore_path)" -o "${GEE_PATH}"
       if ! [[ -f "${GEE_PATH}" ]]; then
         _warn "Could not create \"${GEE_PATH}\", restoring backup."
         _cmd mv -f "${GEE_PATH}"{.backup,}

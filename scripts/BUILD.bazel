@@ -24,8 +24,19 @@ filegroup(
 )
 
 astore_upload(
-    name = "test_deploy",
-    dir = "test",
+    name = "deploy",
+    file = "test/gee",
+    targets = [
+        ":gee-script",
+    ],
+    visibility = [
+        "//developer:__subpackages__",
+    ],
+)
+
+astore_upload(
+    name = "deploy_beta",
+    file = "test/gee.beta"
     targets = [
         ":gee-script",
     ],
