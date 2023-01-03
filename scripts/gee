@@ -3690,6 +3690,10 @@ EndOfPrTemplate
       printf "NOTE: this PR includes changes that are also in PR #%d.\n" "${PARENT_PRS[0]}"
       printf "      Review and submit that PR first, so that this PR will be\n"
       printf "      easier to read.\n\n"
+      printf "      To view only the differences from the previous PR:\n\n"
+      #   https://github.com/jonathan-enf/internal/compare/gdma4...gdma5
+      printf "            https://github.com/%s/%s/compare/%s...%s\n\n" \
+        "${GHUSER}" "${REPO}" "${PARENT}" "${CURRENT_BRANCH}"
     fi
     printf "\n# The following files were modified in this PR:\n"
     "${GIT}" diff --name-only "${PARENT}...${CURRENT_BRANCH}" | sed 's/^/# /' | cat
