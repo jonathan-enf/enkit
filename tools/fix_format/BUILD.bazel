@@ -1,0 +1,65 @@
+load("//bazel:py.bzl", "black_dependencies", "en_py_binary", "en_py_library", "en_py_test", "isort_dependencies", "pyzip_binary")
+load("@enkit_pip_deps//:requirements.bzl", "requirement")
+load("@enkit//bazel/astore:defs.bzl", "astore_upload")
+
+genrule(
+    name = "rustfmt_bin",
+    srcs = [
+        "@rules_rust//rust/toolchain:current_rustfmt_toolchain",
+    ],
+    outs = ["rustfmt"],
+    cmd_bash = "cp -a $(location @rules_rust//rust/toolchain:current_rustfmt_toolchain) $@",
+)
+
+en_py_library(
+    name = "fix_format_lib",
+    srcs = ["fix_format.py"],
+    data = [
+        ":rustfmt_bin",
+        "@com_github_bazelbuild_buildtools//buildifier",
+        "@terraform_cli_amd64//:terraform",
+        "@verible//verilog/tools/formatter:verible-verilog-format",
+    ],
+    isort = False,  # cannot be enabled for py_binaries that depend on isort.
+    deps = [
+        "//infra/lib:paths",
+        "//infra/lib:stamp",
+        "@rules_python//python/runfiles",
+        "@enkit//tools/mdfmt",
+        requirement("absl-py"),
+        requirement("toml"),
+    ] + black_dependencies + isort_dependencies,
+)
+
+en_py_binary(
+    name = "fix_format",
+    srcs = ["main.py"],
+    isort = False,  # cannot be enabled for py_binaries that depend on isort.
+    main = "main.py",
+    deps = [":fix_format_lib"],
+)
+
+pyzip_binary(
+    name = "fix_format_pyzip",
+    src = ":fix_format",
+)
+
+en_py_test(
+    name = "fix_format_test",
+    srcs = ["fix_format_test.py"],
+    data = glob(["testdata/*"]) + ["//:.rustfmt.toml"],
+    deps = [
+        ":fix_format_lib",
+        requirement("absl-py"),
+    ],
+)
+
+# Running :deploy will also edit the fix_format.version.bzl file to contain
+# updated UID and SHA values. Always use the "--stamp" flag when running
+# deploy, or version information will not be embedded.
+astore_upload(
+    name = "deploy",
+    file = "tools/fix_format_pyzip",
+    targets = [":fix_format_pyzip"],
+    uidfile = "fix_format.version.bzl",
+)
