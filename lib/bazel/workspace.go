@@ -12,8 +12,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/enfabrica/enkit/lib/logger"
 	"github.com/bazelbuild/buildtools/wspace"
+	"github.com/enfabrica/enkit/lib/logger"
 )
 
 // Workspace corresponds to a bazel workspace on the filesystem, as defined by
@@ -22,9 +22,9 @@ type Workspace struct {
 	root    string // Path to the workspace root on the filesystem
 	options *baseOptions
 
-	lock sync.Mutex
-	bazelBin  string
-	sourceDir string
+	lock          sync.Mutex
+	bazelBin      string
+	sourceDir     string
 	outputBaseDir string
 
 	sourceFS fs.FS
@@ -56,6 +56,54 @@ func OpenWorkspace(rootPath string, options ...BaseOption) (*Workspace, error) {
 
 	w.options.Log.Debugf("Opened bazel workspace at %q", rootPath)
 	return w, nil
+}
+
+func (w *Workspace) getHeadRevision() (string, error) {
+	cmd := exec.Command("git", "rev-parse", "HEAD")
+	cmd.Dir = w.root
+	cmd.Env = append(os.Environ(), w.options.ExtraEnv...)
+	gitCmd, err := NewCommand(cmd, w.options.ExtraEnv)
+	if err != nil {
+		return "", fmt.Errorf("failed to construct git command: %w", err)
+	}
+	w.options.Log.Debugf("=> %s", CommandString(cmd, w.options.ExtraEnv))
+
+	defer cmd.Close()
+	err = cmd.Run()
+
+	if err != nil {
+		return "", fmt.Errorf("Command: %s\nFailed: %v\n\nbazel stderr:\n\n%s", cmd.String(), err, cmd.StderrContents())
+	}
+
+	b, err := cmd.StdoutContents()
+	if err != nil {
+		return "", err
+	}
+	return string(bytes.TrimSpace(b)), nil
+}
+
+func (w *Workspace) listDeltaFiles(commit string) (string, error) {
+	cmd := exec.Command("git", "diff", "--name-only", commit, "HEAD")
+	cmd.Dir = w.root
+	cmd.Env = append(os.Environ(), w.options.ExtraEnv...)
+	gitCmd, err := NewCommand(cmd, w.options.ExtraEnv)
+	if err != nil {
+		return "", fmt.Errorf("failed to construct git command: %w", err)
+	}
+	w.options.Log.Debugf("=> %s", CommandString(cmd, w.options.ExtraEnv))
+
+	defer cmd.Close()
+	err = cmd.Run()
+
+	if err != nil {
+		return "", fmt.Errorf("Command: %s\nFailed: %v\n\nbazel stderr:\n\n%s", cmd.String(), err, cmd.StderrContents())
+	}
+
+	b, err := cmd.StdoutContents()
+	if err != nil {
+		return "", err
+	}
+	return string(bytes.TrimSpace(b)), nil
 }
 
 func (w *Workspace) getAndCachePath(path string, dest *string) (string, error) {
@@ -106,8 +154,8 @@ func (w *Workspace) OpenSource(path string) (fs.File, error) {
 }
 
 func (w *Workspace) OutputExternal() (string, error) {
-       obase, err := w.OutputBaseDir()
-       if err != nil {
+	obase, err := w.OutputBaseDir()
+	if err != nil {
 		return "", err
 	}
 

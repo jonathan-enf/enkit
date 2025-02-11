@@ -197,6 +197,12 @@ func SerialQuery(opt GetModeOptions, log logger.Logger) (*GetResult, error) {
 
 	var errs []error
 	var result GetResult
+	startHeadRev, err := startWorkspace.getHeadRevision()
+	log.Infof("'before' workspace HEAD commit: %s", startHeadRev)
+	endHeadRev, err := endWorkspace.getHeadRevision()
+	log.Infof("'after' workspace HEAD commit: %s", endHeadRev)
+	deltaFiles, err := endWorkspace.listDeltaFiles(startHeadRev)
+	log.Infof("Changed filed:\n%s", deltaFiles)
 	log.Infof("Querying dependency graph for 'before' workspace...")
 	result.StartQueryResult, err = startWorkspace.Query(opt.Query, WithUnorderedOutput(), workspaceLogStart)
 	if err != nil {
